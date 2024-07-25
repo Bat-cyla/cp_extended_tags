@@ -17,7 +17,6 @@
         {include file="common/pagination.tpl" save_current_page=true save_current_url=true}
         {if $tags}
 
-
         <input type="hidden" name="object_type" value="{$object_type}">
             {capture name="cp_extended_tags_table"}
                 <div class="table-responsive-wrapper longtap-selection">
@@ -88,7 +87,7 @@
                             </td>
 
                                 <td class="center" width="8%" >
-                                    <a href="{$type.url|fn_link_attach:"tag=`$tag.tag`"|fn_url}">{$tag.popularity}</a>
+                                    <a href="{$type.url|fn_link_attach:"tag=`$tag.tag`?cp_user_id=`$user_id`?cp_user_type=`$user_type`"|fn_url}">{$tag.popularity}</a>
                                 </td>
                             <td width="8%" >
                             </td>

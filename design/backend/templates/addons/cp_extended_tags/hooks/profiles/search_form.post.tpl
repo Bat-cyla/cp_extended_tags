@@ -5,6 +5,8 @@
             <tr valign="top" class="delim">
                 <td width="350px" data-th="test">
                     <div class="object-selector object-selector--mobile-full-width object-selector--half-width">
+                        <input type="hidden" name="user_id" value="{$user_id}">
+                        <input type="hidden" name="user_type" value="{$user_type}">
                         <select id="tags" class="cm-object-selector select2-hidden-accessible" multiple=""
                                 name="tags[]" data-ca-placeholder={__("browse")} data-ca-enable-images="true" data-ca-image-width="30"
                                 data-ca-image-height="30" data-ca-enable-search="true" data-ca-page-size="10"

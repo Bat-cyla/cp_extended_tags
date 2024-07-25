@@ -20,7 +20,8 @@
 use Tygh\Tygh;
 
 if (!defined('BOOTSTRAP')) { die('Access denied'); }
-
+$user_type=Tygh::$app['session']['auth']['user_type'];
+$user_id=Tygh::$app['session']['auth']['user_id'];
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     if($mode=='update') {
         $user_type=Tygh::$app['session']['auth']['user_type'];
@@ -32,7 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $tags = $customer_data['tags'];
             fn_cp_extended_tags_manage_tags($tags, $customer_id, $object_type, $user_type,$user_id);
             if (!empty($_REQUEST['user_tags'])) {
-                
+
                 $exist_tags = $_REQUEST['user_tags'];
                 fn_cp_extended_tags_delete_tags_links_by_ids($tags, $exist_tags, $customer_id, $object_type);
             }
@@ -47,20 +48,19 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 if($mode=='manage'){
     $users=Tygh::$app['view']->getTemplateVars('users');
     foreach($users as $key=>$user){
-        $users[$key]['tags']=fn_cp_extended_tags_get_object_tags($user['user_id'],'C');
+        $users[$key]['tags']=fn_cp_extended_tags_get_object_tags_data($user['user_id'],'C',$user_type,$user_id);
     }
-    $tags=fn_cp_extended_tags_get_distinct_tag('C');
-    if($_REQUEST['is_search']='Y' and !empty($_REQUEST['tags'])){
-
-    }
+    $tags=fn_cp_extended_tags_get_distinct_tag('C',$user_id);
     Tygh::$app['view']->assign([
         'tags'=>$tags,
-        'users'=> $users
+        'users'=> $users,
+        'user_type'=>$user_type,
+        'user_id'=>$user_id,
     ]);
 }
 elseif($mode=='update'){
     if(isset($_REQUEST['user_id'])){
-        $tags=fn_cp_extended_tags_get_object_tags_data($_REQUEST['user_id'],'C');
+        $tags=fn_cp_extended_tags_get_object_tags_data($_REQUEST['user_id'],'C',$user_type,$user_id);
     }
     $user_data=Tygh::$app['view']->getTemplateVars('user_data');
     $user_data['tags']=$tags;

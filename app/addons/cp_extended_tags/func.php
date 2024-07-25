@@ -87,10 +87,10 @@ function fn_cp_get_extended_tags($params = array(), $items_per_page = 0):array
      * @param array $fields Selected fields
      */
     fn_set_hook('get_cp_extended_tags', $params, $condition, $sorting, $limit, $fields);
-
+    $user_id=$params['user_id'];
     $join .= db_quote(' LEFT JOIN ?:cp_extended_tags_links ON ?:cp_extended_tags.tag_id = ?:cp_extended_tags_links.tag_id ');
 
-    $fields[]="(SELECT COUNT(tag_id) FROM ?:cp_extended_tags_links WHERE tag_id=?:cp_extended_tags.tag_id AND object_type='$object_type') as popularity";
+    $fields[]="(SELECT COUNT(tag_id) FROM ?:cp_extended_tags_links WHERE tag_id=?:cp_extended_tags.tag_id AND object_type='$object_type' AND user_id='$user_id') as popularity";
 
     if (!empty($params['items_per_page'])) {
         $params['total_items'] = db_get_field("SELECT COUNT(tag) FROM ?:cp_extended_tags $join WHERE 1 $condition");
@@ -112,24 +112,45 @@ function fn_cp_get_extended_tags($params = array(), $items_per_page = 0):array
 
 
 function fn_cp_extended_tags_get_orders($params, $fields, $sortings, &$condition, &$join, &$group){
-    if(isset($params['is_search']) and isset($params['tags'])){
 
-            $join .= db_quote(" LEFT JOIN ?:cp_extended_tags_links ON ?:orders.order_id=?:cp_extended_tags_links.object_id");
-            $tag_ids= db_get_fields('SELECT tag_id FROM ?:cp_extended_tags WHERE tag IN (?a)',$params['tags']);
-            $condition .= db_quote(" AND ?:cp_extended_tags_links.tag_id IN (?n)",$tag_ids);
+    if(isset($params['is_search']) && isset($params['tags'])){
+
+            $user_id = $params['user_id'];
+            $user_type=$params['user_type'];
+            $data=[
+                [
+                    'tag',
+                    'IN',
+                    $params['tags']
+                ]
+            ];
+            $tag_ids= db_get_fields('SELECT tag_id FROM ?:cp_extended_tags WHERE ?w',$data);
+            $join .= db_quote(" LEFT JOIN ?:cp_extended_tags_links as links ON ?:orders.order_id=links.object_id");
+            $condition = db_quote(" AND links.tag_id IN (?n)",$tag_ids);
+            $condition .= db_quote(" AND links.user_type=?s", $user_type);
+            $condition .= db_quote(" AND links.user_id=?i", $user_id);
+
             $group = ' GROUP BY ?:orders.order_id';
     }
+
+
     if(isset($params['tag'])){
+
         $tag=$params['tag'];
         $tag_id=db_get_field('SELECT tag_id FROM ?:cp_extended_tags WHERE tag=?s',$tag);
 
         $data=[
             'tag_id'=>$tag_id,
-            'object_type'=>'O'
+            'object_type'=>'O',
+            'user_type'=>$params['cp_user_type'],
+            'user_id'=>$params['cp_user_id'],
+
         ];
         $order_ids=db_get_fields('SELECT object_id FROM ?:cp_extended_tags_links WHERE ?w',$data);
+
         $condition .= db_quote(" AND ?:orders.order_id IN (?n)",$order_ids);
     }
+
 }
 function fn_cp_extended_tags_get_promotion_data_post($promotion_id,$lang_code, &$promotion_data):array
 {
@@ -184,30 +205,41 @@ function fn_cp_extended_tags_manage_tags($tags,$object_id,$object_type,$user_typ
     }
 }
 
-function fn_cp_extended_tags_get_distinct_tag($object_id):array
+function fn_cp_extended_tags_get_distinct_tag($object_type,$user_id):array
 {
-    return db_get_fields("SELECT  DISTINCT(tag) FROM ?:cp_extended_tags LEFT JOIN ?:cp_extended_tags_links as links ON ?:cp_extended_tags.tag_id=links.tag_id WHERE object_type = ?s",$object_id);
+    $data=[
+        'object_type'=>$object_type,
+        'user_id'=>$user_id
+    ];
+
+    return db_get_fields("SELECT  DISTINCT(tag) FROM ?:cp_extended_tags LEFT JOIN ?:cp_extended_tags_links as links ON ?:cp_extended_tags.tag_id=links.tag_id WHERE ?w",$data);
 }
-function fn_cp_extended_tags_get_object_tags_data($id,$object_type):array
+function fn_cp_extended_tags_get_object_tags_data($id,$object_type,$user_type,$user_id):array
 {
     $data=array(
         'object_id'=>$id,
-        'object_type'=>$object_type
+        'object_type'=>$object_type,
+        'user_type'=>$user_type,
+        'user_id'=>$user_id
     );
     return  db_get_array("SELECT * FROM ?:cp_extended_tags LEFT JOIN ?:cp_extended_tags_links as links ON ?:cp_extended_tags.tag_id=links.tag_id WHERE ?w",$data);
 
 }
-function fn_cp_extended_tags_get_users($params, $fields, $sortings, &$condition, $join, $auth){
+function fn_cp_extended_tags_get_users($params, $fields, $sortings, &$condition, &$join, $auth){
 
-    if(isset($params['is_search'])){
-        if(isset($params['tags']) and !empty($params['tags'])){
+    if(isset($params['is_search']) && isset($params['tags'])){
+
+            $user_type=$params['user_type'];
+            $user_id=$params['user_id'];
             $join=db_quote('LEFT JOIN ?:cp_extended_tags as tags ON ?:cp_extended_tags_links.tag_id=tags.tag_id');
             $search_tags=$params['tags'];
             $ids=db_get_fields('SELECT object_id  FROM ?:cp_extended_tags_links ?p WHERE tag in (?a) AND object_type=?s',$join,$search_tags,$params['user_type']);
             if(isset($ids)){
-                $condition['search_id']=db_quote(' AND ?:users.user_id IN (?n)', $ids);
+                $condition=db_quote(' AND ?:users.user_id IN (?n)', $ids);
+                $condition .= db_quote(" AND links.user_type=?s", $user_type);
+                $condition .= db_quote(" AND links.user_id=?i", $user_id);
             }
-        }
+
     }
     if(isset($params['tag'])){
         $tag=$params['tag'];
@@ -216,21 +248,14 @@ function fn_cp_extended_tags_get_users($params, $fields, $sortings, &$condition,
         $data=[
             'tag_id'=>$tag_id,
             'object_type'=>'C',
+            'user_type'=>$params['cp_user_type'],
+            'user_id'=>$params['cp_user_id']
         ];
         $user_ids=db_get_fields('SELECT object_id FROM ?:cp_extended_tags_links WHERE ?w',$data);
 
         $condition['filter_id']= db_quote(" AND ?:users.user_id IN (?n)", $user_ids);
 
     }
-}
-
-function fn_cp_extended_tags_get_object_tags($id,$object_type):array
-{
-    $data=array(
-        'object_id'=>$id,
-        'object_type'=>$object_type
-    );
-    return db_get_array('SELECT tag,status FROM ?:cp_extended_tags LEFT JOIN ?:cp_extended_tags_links as links ON ?:cp_extended_tags.tag_id=links.tag_id WHERE ?w', $data);
 }
 
 function fn_cp_extended_tags_update_tags_info($tag_id,$tag_status):void

@@ -71,14 +71,15 @@ elseif($mode == 'manage')
     }elseif($auth['user_type']=='V'){
         $_REQUEST['user_id']=$auth['user_id'];
     }
-
-
+    $_REQUEST['user_type']=$auth['user_type'];
         list($tags, $params) = fn_cp_get_extended_tags($_REQUEST, Registry::get('settings.Appearance.admin_elements_per_page'));
         $object_type=$params['object_type'];
     Tygh::$app['view']->assign(array(
         'tags'  => $tags,
         'search' => $params,
-        'object_type'=>$object_type
+        'object_type'=>$object_type,
+        'user_id'=>$auth['user_id'],
+        'user_type'=>$auth['user_type'],
     ));
 
 }
