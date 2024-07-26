@@ -93,7 +93,7 @@
                             </td>
                                 <td class="center" width="8%" >
                                     <input type="hidden" value="{$tag.tag_id}" name="tags_ids[]">
-                                <input type="checkbox" name="active_tags_ids[]" value="{$tag.tag_id}"
+                                    <input type="checkbox" name="active_tags_ids[]" value="{$tag.tag_id}"
                                             {if $tag.status == 'A'}
                                                 checked
                                             {/if}

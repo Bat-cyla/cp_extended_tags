@@ -9,7 +9,7 @@
         <span class="cp-input">
         <ul id="my_tags" class="cp-ul">
             {foreach $user_data.tags as $tag}
-                <textarea name="user_tags[{$tag.tag_id}]" type="text" data-ca-tags="TagsValues" class="hidden-accessible">{$tag.tag}{if !$tag@last}{/if}</textarea>
+                <textarea name="user_tags[{$tag.tag}]" type="text" data-ca-tags="TagsValues" class="hidden-accessible">{$tag.tag}{if !$tag@last}{/if}</textarea>
             {/foreach}
             <input type="hidden" id="object_name" value="user_data[tags][]" />
             {foreach from=$user_data.tags item="tag" name="tag"}

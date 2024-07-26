@@ -19,7 +19,7 @@
       fieldName: $("#object_name").val(),
       autocomplete: {
         source: function source(request, response) {
-          $.ceAjax('request', fn_url('tags.list?q=' + encodeURIComponent(extractLast(request.term))), {
+          $.ceAjax('request', fn_url('cp_extended_tags.list?q=' + encodeURIComponent(extractLast(request.term))), {
             callback: function callback(data) {
               response(data.autocomplete);
             }
@@ -85,7 +85,6 @@
       });
       return false;
     }
-
     init();
   });
 })(Tygh, Tygh.$);

@@ -34,7 +34,7 @@ function fn_cp_get_extended_tags($params = array(), $items_per_page = 0):array
     $sortings = array(
         'timestamp' => '?:cp_extended_tags.timestamp',
         'tag' => '?:cp_extended_tags.tag',
-        'status' => '?:cp_extended_tags.status',
+        'status' => '?:cp_extended_tags_links.status',
         'popularity'=>'popularity'
     );
 
@@ -74,7 +74,7 @@ function fn_cp_get_extended_tags($params = array(), $items_per_page = 0):array
         '?:cp_extended_tags.tag_id',
         '?:cp_extended_tags.tag',
         '?:cp_extended_tags_links.object_id as object_id',
-        '?:cp_extended_tags.status',
+        '?:cp_extended_tags_links.status',
         '?:cp_extended_tags.timestamp',
     );
     /**
@@ -160,21 +160,24 @@ function fn_cp_extended_tags_get_promotion_data_post($promotion_id,$lang_code, &
 }
 function fn_cp_extended_tags_update_order_details_post($params, $order_info):void
 {
+
     $auth=Tygh::$app['session']['auth'];
     $user_type=$auth['user_type'];
-    $user_id=isset($auth['user_id'])?$auth['user_id']:0;
+    $user_id= $auth['user_id'] ?? 0;
     $object_type='O';
     $order_id = $params['order_id'];
     if(!empty($params['tags'])) {
         $tags = $params['tags'];
         fn_cp_extended_tags_manage_tags($tags, $order_id, $object_type,$user_type,$user_id);
         if (!empty($params['order_tags'])) {
-            $exist_tags = $params['order_tags'];
-            fn_cp_extended_tags_delete_tags_links_by_ids($tags, $exist_tags, $order_id, $object_type);
+
+            $exist_tags = array_keys($params['order_tags']);
+            fn_cp_extended_tags_delete_tags_links_by_ids($tags, $exist_tags, $order_id, $object_type,$user_type,$user_id);
         }
     }else{
         $tags=[];
-        fn_cp_extended_tags_delete_tags_links_by_ids($tags,$params['order_tags'],$order_id,$object_type);
+        $exist_tags = array_keys($params['order_tags']);
+        fn_cp_extended_tags_delete_tags_links_by_ids($tags,$exist_tags,$order_id,$object_type,$user_type,$user_id);
     }
     fn_cp_extended_tags_delete_tags();
 }
@@ -183,7 +186,6 @@ function fn_cp_extended_tags_manage_tags($tags,$object_id,$object_type,$user_typ
 
     foreach ($tags as $tag) {
         if (!empty($tag)) {
-
             //Checking if there is tag with that name in db
             if (!empty(fn_cp_extended_tags_check_if_exist($tag))) {
                 $tag_id = fn_cp_extended_tags_check_if_exist($tag);
@@ -191,6 +193,7 @@ function fn_cp_extended_tags_manage_tags($tags,$object_id,$object_type,$user_typ
                 //Checking if there is a link to this tag
                 if (!empty(fn_cp_extended_tags_check_ids_match($tag_id, $object_id, $object_type, $user_type,$user_id))) {
                     //Updating tag info
+
                     fn_cp_extended_tags_update_tags_info($tag_id, $object_id);
                 } else {
                     //Adding a link to an existing tag
@@ -258,14 +261,19 @@ function fn_cp_extended_tags_get_users($params, $fields, $sortings, &$condition,
     }
 }
 
-function fn_cp_extended_tags_update_tags_info($tag_id,$tag_status):void
+function fn_cp_extended_tags_update_tags_info($tag_id,$tag_status,$object_type,$user_type,$user_id):void
 {
-    $tag_data = array(
-        'status'=> $tag_status,
-        'timestamp'=>TIME
-    );
+    $data=[
+        'user_type'=>$user_type,
+        'user_id'=>$user_id,
+        'object_type'=>$object_type,
+        'tag_id'=>$tag_id,
+    ];
+    $tag_data = [
+            'status'=> $tag_status,
+    ];
 
-    db_query('UPDATE ?:cp_extended_tags SET ?u WHERE tag_id = ?i', $tag_data, $tag_id);
+    db_query('UPDATE ?:cp_extended_tags_links SET ?u WHERE ?w', $tag_data, $data);
 }
 
 function fn_cp_extended_tags_add_tag($object_id,$object_type,$tag,$user_type,$user_id):void
@@ -324,23 +332,42 @@ function fn_cp_extended_tags_add_link($tag_id,$object_id,$object_type,$user_type
 
     db_query("INSERT INTO ?:cp_extended_tags_links ?e",$tag_link_data);
 }
-function fn_cp_extended_tags_delete_tags_links_by_ids($tags,$exist_tags,$object_id,$object_type):void
+function fn_cp_extended_tags_delete_tags_links_by_ids($tags,$exist_tags,$object_id,$object_type,$user_type,$user_id):void
 {
-    $ids_to_delete=[];
     if(isset($tags)){
-        foreach ($exist_tags as $tag_id=>$tag) {
+        foreach ($exist_tags as $tag) {
             if (!in_array($tag, $tags)) {
-                $ids_to_delete[] = $tag_id;
+                $tag_links_to_delete[] = $tag;
                 }
             }
         }
         else {
-            foreach ($exist_tags as $tag_id => $tag) {
-                $ids_to_delete[] = $tag_id;
+            foreach ($exist_tags as $tag) {
+                $tag_links_to_delete[] = $tag;
             }
         }
-    if (!empty($ids_to_delete)) {
-        db_query('DELETE FROM ?:cp_extended_tags_links WHERE tag_id IN (?n) AND object_id=?i AND object_type=?s', $ids_to_delete, $object_id,$object_type);
+
+    if (!empty($tag_links_to_delete)) {
+        $data=[
+            [
+                'tag',
+                'IN',
+                $tag_links_to_delete,
+            ]
+        ];
+        $ids_to_delete=db_get_fields('SELECT tag_id FROM ?:cp_extended_tags WHERE ?w',$data);
+        $data=[
+            'user_type'=>$user_type,
+            'user_id'=>$user_id,
+            'object_id'=>$object_id,
+            'object_type'=>$object_type,
+            [
+                'tag_id',
+                'IN',
+                $ids_to_delete,
+            ]
+        ];
+        db_query('DELETE FROM ?:cp_extended_tags_links  WHERE ?w',$data);
     }
 
 }
@@ -352,23 +379,48 @@ function fn_cp_extended_tags_delete_tags():void
 
 function fn_cp_extended_tags_delete_tags_before_import($object_id):void
 {
-
+    //TODO:Переделать эту функцию для exim
     $db_tags=db_get_fields('SELECT tag_id FROM ?:cp_extended_tags_links WHERE object_id=?i',$object_id);
     if(!empty($db_tags)){
         foreach($db_tags as $tag){
-            fn_delete_tag_by_id($tag);
+            fn_delete_tag_by_id($tag,$user_type,$user_id);
         }
     }
 }
 
-function fn_delete_tag_by_id($tag_id):void
+function fn_delete_tag_by_id($tag_id,$object_type,$user_type,$user_id):void
 {
     $tag_id = is_array($tag_id) ? $tag_id : (array) $tag_id;
-        db_query('DELETE FROM ?:cp_extended_tags_links WHERE tag_id IN (?n)',$tag_id);
-        db_query('DELETE FROM ?:cp_extended_tags WHERE tag_id IN (?n)',$tag_id);
+    $data=[
+        'object_type'=>$object_type,
+        'user_type'=>$user_type,
+        'user_id'=>$user_id,
+            [
+                'tag_id',
+                'IN',
+                $tag_id
+            ]
+    ];
+        db_query('DELETE FROM ?:cp_extended_tags_links WHERE ?w',$data);
+        $ids_collector=db_get_fields('SELECT tag_id FROM ?:cp_extended_tags_links WHERE tag_id IN (?n)',$tag_id);
+        if(empty($ids_collector)){
+            db_query('DELETE FROM ?:cp_extended_tags WHERE tag_id IN (?n)',$ids_collector);
+        }
 
 }
 
+function fn_cp_extended_tags_get_tag_names($params,$user_id,$user_type)
+{
+    $join = db_quote("LEFT JOIN ?:cp_extended_tags_links ON ?:cp_extended_tags.tag_id = ?:cp_extended_tags_links.tag_id");
+    $conditions=db_quote(" AND ?:cp_extended_tags.user_id=$user_id");
+    $conditions.=db_quote(" AND ?:cp_extended_tags.user_type=$user_type");
+    $conditions .= db_quote(" AND ?:cp_extended_tags.tag LIKE ?l", "%".trim($params['tag'])."%");
+
+    
+    $tags=db_get_fields("SELECT DISTINCT tag FROM ?:cp_extended_tags ?p WHERE 1 ?p",$join,$conditions);
+
+        return $tags;
+}
 
 
 

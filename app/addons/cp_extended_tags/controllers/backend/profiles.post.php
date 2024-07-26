@@ -34,13 +34,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             fn_cp_extended_tags_manage_tags($tags, $customer_id, $object_type, $user_type,$user_id);
             if (!empty($_REQUEST['user_tags'])) {
 
-                $exist_tags = $_REQUEST['user_tags'];
-                fn_cp_extended_tags_delete_tags_links_by_ids($tags, $exist_tags, $customer_id, $object_type);
+                $exist_tags = array_keys($_REQUEST['user_tags']);
+                fn_cp_extended_tags_delete_tags_links_by_ids($tags, $exist_tags, $customer_id, $object_type,$user_type,$user_id);
             }
         }
         else{
             $tags=[];
-            fn_cp_extended_tags_delete_tags_links_by_ids($tags, $_REQUEST['user_tags'], $customer_id, $object_type);
+            $exist_tags = array_keys($_REQUEST['user_tags']);
+            fn_cp_extended_tags_delete_tags_links_by_ids($tags, $exist_tags, $customer_id, $object_type,$user_type,$user_id);
         }
         fn_cp_extended_tags_delete_tags();
     }

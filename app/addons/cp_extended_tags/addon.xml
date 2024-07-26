@@ -30,6 +30,7 @@
             `object_id` mediumint(8) unsigned NOT NULL,
             `user_type` char(1) NOT NULL default '',
             `user_id` int(11) NOT NULL,
+            `status` char(1) NOT NULL default 'D',
             PRIMARY KEY  (`object_type`,`object_id`,`tag_id`),
             KEY `tag_id` (`tag_id`),
             KEY `ids` (`tag_id`,`object_type`,`object_id`)
@@ -40,7 +41,6 @@
         `tag_id` int(11) unsigned NOT NULL auto_increment,
         `tag` varchar(255) NOT NULL default '',
         `timestamp` int(11) unsigned NOT NULL default '0',
-        `status` char(1) NOT NULL default 'A',
         PRIMARY KEY  (`tag_id`)
         ) ENGINE=MyISAM DEFAULT CHARSET=utf8;
     </item>
