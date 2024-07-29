@@ -30,4 +30,5 @@ $schema['export_fields']['Tags']=array(
     ],
 
 );
+
 return $schema;

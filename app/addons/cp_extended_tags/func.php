@@ -57,7 +57,8 @@ function fn_cp_get_extended_tags($params = array(), $items_per_page = 0):array
            $condition = db_quote(' AND status = ?s AND object_type=?s', $params['status'],$object_type);
        }
        if(!empty($params['tag'])){
-           $condition = db_quote(' AND tag = ?s AND object_type=?s', $params['tag'], $object_type);
+           $tag=$params['tag'];
+           $condition = db_quote( "AND ?:cp_extended_tags.tag LIKE ?l AND object_type=?s", "%".trim($tag)."%" , $object_type);
        }
     }
     if(!empty($params['user_id'])){
@@ -188,15 +189,18 @@ function fn_cp_extended_tags_manage_tags($tags,$object_id,$object_type,$user_typ
         if (!empty($tag)) {
             //Checking if there is tag with that name in db
             if (!empty(fn_cp_extended_tags_check_if_exist($tag))) {
+
                 $tag_id = fn_cp_extended_tags_check_if_exist($tag);
 
                 //Checking if there is a link to this tag
                 if (!empty(fn_cp_extended_tags_check_ids_match($tag_id, $object_id, $object_type, $user_type,$user_id))) {
                     //Updating tag info
+                    $tag_status=fn_cp_extended_tags_get_status($tag_id, $object_id, $object_type, $user_type,$user_id);
 
-                    fn_cp_extended_tags_update_tags_info($tag_id, $object_id);
+                    fn_cp_extended_tags_update_tags_info($tag_id,$tag_status, $object_id,$user_type,$user_id);
                 } else {
                     //Adding a link to an existing tag
+
                     fn_cp_extended_tags_add_link($tag_id, $object_id, $object_type, $user_type,$user_id);
                 }
             } else {
@@ -261,6 +265,17 @@ function fn_cp_extended_tags_get_users($params, $fields, $sortings, &$condition,
     }
 }
 
+function fn_cp_extended_tags_get_status($tag_id, $object_id, $object_type, $user_type,$user_id)
+{
+    $data=[
+        'tag_id'=>$tag_id,
+        'object_id'=>$object_id,
+        'object_type'=>$object_type,
+        'user_type'=>$user_type,
+        'user_id'=>$user_id
+    ];
+    return db_get_field('SELECT status FROM ?:cp_extended_tags_links WHERE ?w',$data);
+}
 function fn_cp_extended_tags_update_tags_info($tag_id,$tag_status,$object_type,$user_type,$user_id):void
 {
     $data=[
@@ -309,7 +324,7 @@ function fn_cp_extended_tags_check_if_exist($tag):string
           return  db_get_field("SELECT tag_id FROM ?:cp_extended_tags WHERE ?w",$tag_data);
 }
 
-function fn_cp_extended_tags_check_ids_match($tag_id,$object_id,$object_type,$user_type,$user_id):array
+function fn_cp_extended_tags_check_ids_match($tag_id,$object_id,$object_type,$user_type,$user_id)
 {
     $tag_data=array(
         'tag_id'=>$tag_id,
@@ -318,7 +333,7 @@ function fn_cp_extended_tags_check_ids_match($tag_id,$object_id,$object_type,$us
         'user_type'=>$user_type,
         'user_id'=>$user_id
     );
-    return db_get_row("SELECT tag_id FROM ?:cp_extended_tags_links WHERE ?w",$tag_data);
+    return db_get_field("SELECT tag_id FROM ?:cp_extended_tags_links WHERE ?w",$tag_data);
 }
 function fn_cp_extended_tags_add_link($tag_id,$object_id,$object_type,$user_type,$user_id):void
 {
@@ -377,13 +392,18 @@ function fn_cp_extended_tags_delete_tags():void
     db_query('DELETE FROM ?:cp_extended_tags WHERE tag_id NOT IN (?n)',$links);
 }
 
-function fn_cp_extended_tags_delete_tags_before_import($object_id):void
+function fn_cp_extended_tags_delete_tags_before_import($object_id,$object_type,$user_id,$user_type):void
 {
-    //TODO:Переделать эту функцию для exim
-    $db_tags=db_get_fields('SELECT tag_id FROM ?:cp_extended_tags_links WHERE object_id=?i',$object_id);
+    $data=[
+        'object_id'=>$object_id,
+        'object_type'=>$object_type,
+        'user_type'=>$user_type,
+        'user_id'=>$user_id
+    ];
+    $db_tags=db_get_fields('SELECT tag_id FROM ?:cp_extended_tags_links WHERE ?w',$data);
     if(!empty($db_tags)){
         foreach($db_tags as $tag){
-            fn_delete_tag_by_id($tag,$user_type,$user_id);
+            fn_delete_tag_by_id($tag,$object_type,$user_type,$user_id);
         }
     }
 }
@@ -412,11 +432,11 @@ function fn_delete_tag_by_id($tag_id,$object_type,$user_type,$user_id):void
 function fn_cp_extended_tags_get_tag_names($params,$user_id,$user_type)
 {
     $join = db_quote("LEFT JOIN ?:cp_extended_tags_links ON ?:cp_extended_tags.tag_id = ?:cp_extended_tags_links.tag_id");
-    $conditions=db_quote(" AND ?:cp_extended_tags.user_id=$user_id");
-    $conditions.=db_quote(" AND ?:cp_extended_tags.user_type=$user_type");
+    $conditions=db_quote(" AND ?:cp_extended_tags_links.user_id=$user_id");
+    $conditions.=db_quote(" AND ?:cp_extended_tags_links.user_type='$user_type'");
     $conditions .= db_quote(" AND ?:cp_extended_tags.tag LIKE ?l", "%".trim($params['tag'])."%");
 
-    
+
     $tags=db_get_fields("SELECT DISTINCT tag FROM ?:cp_extended_tags ?p WHERE 1 ?p",$join,$conditions);
 
         return $tags;
