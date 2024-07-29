@@ -92,7 +92,6 @@ elseif($mode == 'manage')
     $_REQUEST['user_id']=$user_id;
     $_REQUEST['user_type']=$auth['user_type'];
         list($tags, $params) = fn_cp_get_extended_tags($_REQUEST, Registry::get('settings.Appearance.admin_elements_per_page'));
-
         $object_type=$params['object_type'];
     Tygh::$app['view']->assign(array(
         'tags'  => $tags,
@@ -103,7 +102,9 @@ elseif($mode == 'manage')
     ));
 
 }elseif ($mode == 'list') {
+
     if (defined('AJAX_REQUEST')) {
+
         $tags = fn_cp_extended_tags_get_tag_names(array('tag' => $_REQUEST['q']),$user_id,$user_type);
         Tygh::$app['ajax']->assign('autocomplete', $tags);
         exit();
