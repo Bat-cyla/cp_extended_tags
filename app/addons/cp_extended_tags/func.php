@@ -432,8 +432,8 @@ function fn_delete_tag_by_id($tag_id,$object_type,$user_type,$user_id):void
 function fn_cp_extended_tags_get_tag_names($params,$user_id,$user_type)
 {
     $join = db_quote("LEFT JOIN ?:cp_extended_tags_links ON ?:cp_extended_tags.tag_id = ?:cp_extended_tags_links.tag_id");
-    $conditions=db_quote(" AND ?:cp_extended_tags_links.user_id=$user_id");
-    $conditions.=db_quote(" AND ?:cp_extended_tags_links.user_type='$user_type'");
+    $conditions=db_quote(" AND ?:cp_extended_tags_links.user_id=?i",$user_id);
+    $conditions.=db_quote(" AND ?:cp_extended_tags_links.user_type=?s",$user_type);
     $conditions .= db_quote(" AND ?:cp_extended_tags.tag LIKE ?l", "%".trim($params['tag'])."%");
     $tags=db_get_fields("SELECT DISTINCT tag FROM ?:cp_extended_tags ?p WHERE 1 ?p",$join,$conditions);
 
