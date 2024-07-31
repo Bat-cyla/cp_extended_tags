@@ -153,12 +153,6 @@ function fn_cp_extended_tags_get_orders($params, $fields, $sortings, &$condition
     }
 
 }
-function fn_cp_extended_tags_get_promotion_data_post($promotion_id,$lang_code, &$promotion_data):array
-{
-     $promotion_data['tags'] = db_get_field("SELECT tags FROM ?:promotions WHERE promotion_id = ?i", $promotion_id);
-
-     return $promotion_data;
-}
 function fn_cp_extended_tags_update_order_details_post($params, $order_info):void
 {
 

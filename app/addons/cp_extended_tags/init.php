@@ -21,7 +21,6 @@ if (!defined('BOOTSTRAP')) { die('Access denied'); }
 
 fn_register_hooks(
     'update_order_details_post',
-    'get_promotion_data_post',
     'get_users',
     'get_orders'
 );

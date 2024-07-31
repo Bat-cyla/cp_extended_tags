@@ -44,12 +44,8 @@
         PRIMARY KEY  (`tag_id`)
         ) ENGINE=MyISAM DEFAULT CHARSET=utf8;
     </item>
-        <item>
-            ALTER TABLE ?:promotions ADD tags VARCHAR(1) NOT NULL default 'N'
-        </item>
         <item for="uninstall">DROP TABLE IF EXISTS ?:cp_tags_ext_links;</item>
         <item for="uninstall">DROP TABLE IF EXISTS ?:cp_tags_ext;</item>
-        <item for="uninstall">ALTER TABLE `?:promotions` DROP COLUMN `tags`;</item>
 
     </queries>
 </addon>
